@@ -1,0 +1,29 @@
+{
+  "name": "vlogify",
+  "version": "1.0.0",
+  "description": "Vlogify let the browser create video from any content you copy-past in ",
+  "main": "index.html",
+  "scripts": {
+    "test": "true"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rodezee/vlogify.git"
+  },
+  "keywords": [
+    "vlog",
+    "video",
+    "browser",
+    "content"
+  ],
+  "author": "rodezee",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/rodezee/vlogify/issues"
+  },
+  "homepage": "https://github.com/rodezee/vlogify#readme",
+  "dependencies": {
+    "vite": "^8.0.14",
+    "webm-muxer": "^5.1.4"
+  }
+}
