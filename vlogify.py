@@ -6,9 +6,6 @@ from gtts import gTTS
 from playwright.sync_api import sync_playwright
 from moviepy import ImageClip, AudioFileClip, concatenate_videoclips, CompositeVideoClip, CompositeAudioClip
 
-language = "en"
-volume = 0.30
-
 def clean_only_symbols(text):
     """Strips markdown header markers and symbols from strings."""
     text = re.sub(r'#+\s*', '', text)
@@ -36,13 +33,13 @@ def generate_text_layer(content, index):
             margin: 0; overflow: hidden;
         }}
         .text-container {{
-            background: rgba(0, 0, 0, 0.45);
+            background: rgba(0, 0, 0, 0.65);
             padding: 35px 50px;
             border-radius: 20px;
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             max-width: 85%;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
         }}
         .header {{ 
             font-size: 3.5em; font-weight: bold; margin-bottom: 20px; color: #ffffff;
@@ -73,7 +70,7 @@ def generate_text_layer(content, index):
         browser.close()
     return path
 
-def create_vlog(md_text, music_path=None):
+def create_vlog(md_text, music_path=None, language="en", volume=0.20, output="vlog_output.mp4"):
     # Step 1: Pre-parse markdown blocks cleanly so images don't create empty slides
     raw_blocks = [p.strip() for p in md_text.split('\n\n') if p.strip()]
     processed_segments = []
@@ -141,13 +138,13 @@ def create_vlog(md_text, music_path=None):
             else:
                 bg_music = bg_music.with_duration(final_video.duration)
             
-            # Safely scale background amplitude down to 30% using MoviePy 2.x API
+            # Safely scale background amplitude down to (default) 20% using MoviePy 2.x API
             bg_music = bg_music.with_volume_scaled(volume)
             
             combined_audio = CompositeAudioClip([final_video.audio, bg_music])
             final_video = final_video.with_audio(combined_audio)
             
-        final_video.write_videofile("vlog_output.mp4", fps=24, codec='libx264', audio_codec='aac')
+        final_video.write_videofile(output, fps=24, codec='libx264', audio_codec='aac')
     else:
         print("Error: No text segments available to generate a presentation video.")
         
@@ -168,19 +165,17 @@ if __name__ == "__main__":
         parser.add_argument("-e", "--encoding", help="default: 'utf-8' | markdown file encoding", default='utf-8')
         parser.add_argument("-m", "--music", help="<filename.m4a> input background music", default=None)
         parser.add_argument("-l", "--language", help="default: en | to change language set it to: es, fr", default="en")
-        parser.add_argument("-v", "--volume", help="default: 0.30 | tune the volume of the music", type=float, default=0.30)
+        parser.add_argument("-v", "--volume", help="default: 0.20 | tune the volume of the music", type=float, default=0.20)
+        parser.add_argument("-o", "--output", help="default: vlog_output.mp4 | the output filename", default="vlog_output.mp4")
 
         args = parser.parse_args()
-        print(f"INFO args: {args}")
-        
-        language = args.language
-        volume = args.volume
+        print(f"INFO: {args}")
 
         try:
             # FIXED: Explicitly named the encoding parameter
             with open(args.filename, 'r', encoding=args.encoding) as f:
                 content = f.read()
-            create_vlog(content, args.music)
+            create_vlog(content, args.music, args.language, args.volume, args.output)
         except FileNotFoundError:
             # FIXED: Changed 'filename' to 'args.filename'
             print(f"Error: The file '{args.filename}' was not found.")
