@@ -99,15 +99,32 @@ def create_vlog(md_text, music_path=None, language="en", volume=0.20, output="vl
     
     # Step 2: Build video timelines
     for i, seg in enumerate(processed_segments):
-        print(f"Processing segment {i+1}/{len(processed_segments)}...")
         text_content = seg['text']
         bg_image_path = seg['bg_image']
         
         audio_path = f"temp_audio_{i}.mp3"
+        txt_path = f"temp_txt_{i}.png"
         tts_text = clean_only_symbols(text_content)
         
-        tts = gTTS(text=tts_text, lang=language)
-        tts.save(audio_path)
+        # --- Checkpoint Resumption Checks ---
+        audio_exists = os.path.exists(audio_path)
+        txt_exists = os.path.exists(txt_path)
+        
+        if audio_exists and txt_exists:
+            print(f"Processing segment {i+1}/{len(processed_segments)}... [SKIPPED - Assets already generated]")
+        else:
+            print(f"Processing segment {i+1}/{len(processed_segments)}...")
+            
+            # 1. Generate Voice Audio if missing
+            if not audio_exists:
+                tts = gTTS(text=tts_text, lang=language)
+                tts.save(audio_path)
+                
+            # 2. Generate Transparent Layout Frame if missing
+            if not txt_exists:
+                generate_text_layer(text_content, i)
+        
+        # Load the asset structures into memory to build MoviePy timelines
         audio_clip = AudioFileClip(audio_path)
         duration = audio_clip.duration
         
@@ -118,7 +135,6 @@ def create_vlog(md_text, music_path=None, language="en", volume=0.20, output="vl
         else:
             bg_clip = ImageClip(size=(1280, 720), color=(26, 26, 26)).with_duration(duration)
             
-        txt_path = generate_text_layer(text_content, i)
         txt_clip = ImageClip(txt_path).resized(new_size=(1280, 720)).with_duration(duration)
         
         segment_clip = CompositeVideoClip([bg_clip, txt_clip], size=(1280, 720)).with_audio(audio_clip)
@@ -144,11 +160,13 @@ def create_vlog(md_text, music_path=None, language="en", volume=0.20, output="vl
             combined_audio = CompositeAudioClip([final_video.audio, bg_music])
             final_video = final_video.with_audio(combined_audio)
             
+        print(f"INFO: Rendering master composition to target output path: '{output}'...")
         final_video.write_videofile(output, fps=24, codec='libx264', audio_codec='aac')
     else:
         print("Error: No text segments available to generate a presentation video.")
         
-    # Clean up file structures
+    # Clean up file structures ONLY after successful full master compilation 
+    print("INFO: Master render complete. Sweeping away cache files...")
     for i in range(len(processed_segments)):
         if os.path.exists(f"temp_txt_{i}.png"):
             os.remove(f"temp_txt_{i}.png")
@@ -169,13 +187,11 @@ if __name__ == "__main__":
         parser.add_argument("-o", "--output", help="default: vlog_output.mp4 | the output filename", default="vlog_output.mp4")
 
         args = parser.parse_args()
-        print(f"INFO: {args}")
+        print(f"INFO args: {args}")
 
         try:
-            # FIXED: Explicitly named the encoding parameter
             with open(args.filename, 'r', encoding=args.encoding) as f:
                 content = f.read()
             create_vlog(content, args.music, args.language, args.volume, args.output)
         except FileNotFoundError:
-            # FIXED: Changed 'filename' to 'args.filename'
             print(f"Error: The file '{args.filename}' was not found.")
