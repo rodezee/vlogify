@@ -41,3 +41,9 @@ If you want a custom output file:
 python3 vlogify.py -f README.md -m my_music_file.m4a -o custom_output.mp4
 
 ```
+
+If you want another language:
+```
+python3 vlogify.py -f README.md -m my_music_file.m4a -l es
+
+```
