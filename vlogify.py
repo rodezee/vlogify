@@ -261,7 +261,7 @@ def create_vlog(md_text, music_path=None, language="en", volume=0.20, output="vl
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python3 vlogify.py --filename=filename.md [--encoding=utf-8 --music=background.m4a --language=en --volume=0.30 --pause=0.7]")
+        print("Usage: python3 vlogify.py --filename=filename.md [--encoding=utf-8 --music=background.m4a --language=en --volume=0.20 --pause=0.7]")
     else:
         parser = argparse.ArgumentParser()
 
