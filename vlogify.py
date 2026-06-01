@@ -207,7 +207,8 @@ def create_vlog(md_text, music_path=None, language="en", volume=0.20, output="vl
         audio_clip = CompositeAudioClip([speech_clip]).with_duration(duration)
         
         if bg_image_path and not os.path.exists(bg_image_path):
-            print(f"ERROR: Image not found '{bg_image_path}'")
+            print(f"ERROR: Image file not found '{bg_image_path}'")
+            sys.exit(1);
         
         if bg_image_path and os.path.exists(bg_image_path):
             bg_clip = ImageClip(bg_image_path).resized(new_size=(1280, 720)).with_duration(duration)
@@ -224,6 +225,10 @@ def create_vlog(md_text, music_path=None, language="en", volume=0.20, output="vl
     # Step 3: Combine tracks and mix background music
     if clips:
         final_video = concatenate_videoclips(clips, method="compose")
+        
+        if music_path and not os.path.exists(music_path)
+            print(f"ERROR: Music file not found '{music_path}'")
+            sys.exit(1);
         
         if music_path and os.path.exists(music_path):
             print(f"INFO: Mixing background music from '{music_path}'...")
