@@ -4,6 +4,7 @@ import re
 import argparse
 from gtts import gTTS
 from playwright.sync_api import sync_playwright
+# Added CompositeAudioClip wrapper tools for mixing silent cushions natively
 from moviepy import ImageClip, AudioFileClip, concatenate_videoclips, CompositeVideoClip, CompositeAudioClip
 
 def clean_only_symbols(text):
@@ -134,7 +135,7 @@ def generate_text_layer(content, alt_text, index):
         browser.close()
     return path
 
-def create_vlog(md_text, music_path=None, language="en", volume=0.20, output="vlog_output.mp4"):
+def create_vlog(md_text, music_path=None, language="en", volume=0.20, output="vlog_output.mp4", pause_duration=1.5):
     # Step 1: Pre-parse markdown blocks cleanly so images don't create empty slides
     raw_blocks = [p.strip() for p in md_text.split('\n\n') if p.strip()]
     processed_segments = []
@@ -143,7 +144,6 @@ def create_vlog(md_text, music_path=None, language="en", volume=0.20, output="vl
     current_alt = ""
     
     for block in raw_blocks:
-        # UPDATED REGEX: Captures BOTH the alt text [group 1] and the image source file [group 2]
         img_match = re.search(r'!\[(.*?)\]\((.*?)\)', block)
         
         block_alt = img_match.group(1) if img_match else ""
@@ -186,9 +186,8 @@ def create_vlog(md_text, music_path=None, language="en", volume=0.20, output="vl
         else:
             print(f"Processing segment {i+1}/{len(processed_segments)}...")
             
-            # 1. Generate Voice Audio if missing (tts_text safely omits the markdown image component completely)
+            # 1. Generate Voice Audio if missing
             if not audio_exists:
-                print(f"TTS: '{tts_text}'")
                 tts = gTTS(text=tts_text, lang=language)
                 tts.save(audio_path)
                 
@@ -196,9 +195,16 @@ def create_vlog(md_text, music_path=None, language="en", volume=0.20, output="vl
             if not txt_exists:
                 generate_text_layer(text_content, alt_content, i)
         
-        # Load the asset structures into memory to build MoviePy timelines
-        audio_clip = AudioFileClip(audio_path)
-        duration = audio_clip.duration
+        # Load the speech asset structures into memory
+        speech_clip = AudioFileClip(audio_path)
+        
+        # --- ENHANCEMENT: Pad Segment with Silence ---
+        # Set total track segment length to include the trailing pause cushion
+        duration = speech_clip.duration + pause_duration
+        
+        # Nest the speech within a Composite audio container stretched to the longer duration.
+        # This keeps the track completely silent after the speech finishes playing.
+        audio_clip = CompositeAudioClip([speech_clip]).with_duration(duration)
         
         if bg_image_path and os.path.exists(bg_image_path):
             bg_clip = ImageClip(bg_image_path).resized(new_size=(1280, 720)).with_duration(duration)
@@ -247,7 +253,7 @@ def create_vlog(md_text, music_path=None, language="en", volume=0.20, output="vl
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python3 vlogify.py --filename=filename.md [--encoding=utf-8 --music=background.m4a --language=en --volume=0.30]")
+        print("Usage: python3 vlogify.py --filename=filename.md [--encoding=utf-8 --music=background.m4a --language=en --volume=0.30 --pause=1.5]")
     else:
         parser = argparse.ArgumentParser()
 
@@ -257,6 +263,7 @@ if __name__ == "__main__":
         parser.add_argument("-l", "--language", help="default: en | to change language set it to: es, fr", default="en")
         parser.add_argument("-v", "--volume", help="default: 0.20 | tune the volume of the music", type=float, default=0.20)
         parser.add_argument("-o", "--output", help="default: vlog_output.mp4 | the output filename", default="vlog_output.mp4")
+        parser.add_argument("-p", "--pause", help="default: 1.5 | pause duration in seconds at the end of each slide", type=float, default=1.5)
 
         args = parser.parse_args()
         print(f"INFO: {args}")
@@ -264,6 +271,6 @@ if __name__ == "__main__":
         try:
             with open(args.filename, 'r', encoding=args.encoding) as f:
                 content = f.read()
-            create_vlog(content, args.music, args.language, args.volume, args.output)
+            create_vlog(content, args.music, args.language, args.volume, args.output, args.pause)
         except FileNotFoundError:
             print(f"Error: The file '{args.filename}' was not found.")
