@@ -206,6 +206,9 @@ def create_vlog(md_text, music_path=None, language="en", volume=0.20, output="vl
         # This keeps the track completely silent after the speech finishes playing.
         audio_clip = CompositeAudioClip([speech_clip]).with_duration(duration)
         
+        if bg_image_path and not os.path.exists(bg_image_path):
+            print(f"ERROR: Image not found '{bg_image_path}'")
+        
         if bg_image_path and os.path.exists(bg_image_path):
             bg_clip = ImageClip(bg_image_path).resized(new_size=(1280, 720)).with_duration(duration)
             bg_clip = bg_clip.transform(lambda get_frame, t: get_frame(t), apply_to=[])
