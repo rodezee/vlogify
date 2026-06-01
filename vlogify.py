@@ -226,7 +226,7 @@ def create_vlog(md_text, music_path=None, language="en", volume=0.20, output="vl
     if clips:
         final_video = concatenate_videoclips(clips, method="compose")
         
-        if music_path and not os.path.exists(music_path)
+        if music_path and not os.path.exists(music_path):
             print(f"ERROR: Music file not found '{music_path}'")
             sys.exit(1);
         
