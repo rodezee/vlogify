@@ -12,8 +12,8 @@ def clean_only_symbols(text):
     text = text.replace('```', '')
     return text.strip()
 
-def generate_text_layer(content, index, name=None):
-    """Renders a pixel-perfect transparent overlay with a text shadow glass pill."""
+def generate_text_layer(content, alt_text, index):
+    """Renders a pixel-perfect transparent overlay with split layout: Top Alt Text & Bottom Narrative."""
     lines = [line.strip() for line in content.split('\n') if line.strip()]
     
     if lines and lines[0].startswith('#'):
@@ -27,49 +27,99 @@ def generate_text_layer(content, index, name=None):
     <html>
     <style>
         body {{ 
-            display: flex; flex-direction: column; justify-content: center; 
-            align-items: center; height: 100vh; font-family: sans-serif; 
-            background: transparent; color: #ffffff; padding: 50px; text-align: center; 
-            margin: 0; overflow: hidden;
+            position: relative;
+            height: 100vh; 
+            width: 100vw;
+            font-family: sans-serif; 
+            background: transparent; 
+            color: #ffffff; 
+            margin: 0; 
+            padding: 0;
+            overflow: hidden;
+            box-sizing: border-box;
         }}
-        .text-container {{
+        
+        .glass-pill {{
             background: rgba(0, 0, 0, 0.65);
-            padding: 35px 50px;
+            padding: 20px 40px;
             border-radius: 20px;
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
-            max-width: 85%;
+            max-width: 80%;
             box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+            text-align: center;
         }}
-        .header {{ 
-            font-size: 3.5em; font-weight: bold; margin-bottom: 20px; color: #ffffff;
-            text-shadow: 2px 2px 15px rgba(0,0,0,0.9);
+
+        /* Anchors the extracted image Markdown description to the top center */
+        .top-container {{
+            position: absolute;
+            top: 0px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: center;
+            width: 100%;
         }}
-        .title {{ 
-            font-size: 1.8em; color: #f0f0f0;
-            line-height: 1.4; 
+        .alt-title {{
+            background: rgba(0, 0, 0, 0.65);
+            padding: 10px;
+            border-radius: 0 0 20px 20px;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            max-width: 80%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
             text-shadow: 2px 2px 10px rgba(0,0,0,0.9);
         }}
-        .text {{ 
-            font-size: 1.8em; color: #f0f0f0;
+
+        /* Anchors the title slide narratives firmly along the middle */
+        .center-container {{
+            position: absolute;
+            top: 35%;
+            transform: translateY(-35%);
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }}
+
+        /* Anchors the main slide narratives firmly along the bottom */
+        .bottom-container {{
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }}
+        .header {{ 
+            font-size: 3.2em; 
+            font-weight: bold; 
+            margin-bottom: 15px; 
+            color: #ffffff;
+            text-shadow: 2px 2px 15px rgba(0,0,0,0.9);
+        }}
+        .content {{ 
+            font-size: 1.8em; 
+            color: #f0f0f0;
             line-height: 1.4; 
             text-shadow: 2px 2px 10px rgba(0,0,0,0.9);
         }}
     </style>
     <body>
-        <header>
-            <div class="text-container">
-                {"<div class='header'>" + name + "</div>" if name else ""}
-            </div>
-        </header>
-        <div class="text-container">
-            {"<div class='title'>" + title + "</div>" if title else ""}
-        </div>
-        <footer>
-            <div class="text-container">
-                {"<div class='text'>" + body + "</div>" if body else ""}
-            </div>
-        </footer>
+        
+        {"<div class='top-container'><div class='alt-title'>" + alt_text + "</div></div>" if alt_text else ""}
+        
+        {"<div class='center-container'><div class='glass-pill'><div class='header'>" + title + "</div></div></div>" if title else ""}
+
+        {"<div class='bottom-container'><div class='glass-pill'><div class='content'>" + body + "</div></div></div>" if body else ""}
+
     </body>
     </html>
     """
@@ -90,22 +140,28 @@ def create_vlog(md_text, music_path=None, language="en", volume=0.20, output="vl
     processed_segments = []
     
     current_bg = None
+    current_alt = ""
     
     for block in raw_blocks:
-        img_match = re.search(r'!\[.*?\]\((.*?)\)', block)
-        block_image = img_match.group(1) if img_match else None
+        # UPDATED REGEX: Captures BOTH the alt text [group 1] and the image source file [group 2]
+        img_match = re.search(r'!\[(.*?)\]\((.*?)\)', block)
+        
+        block_alt = img_match.group(1) if img_match else ""
+        block_image = img_match.group(2) if img_match else None
         
         clean_narrative = re.sub(r'!\[.*?\]\((.*?)\)', '', block).strip()
         
         if block_image:
             current_bg = block_image
+            current_alt = block_alt
             
         if not clean_narrative:
             continue
             
         processed_segments.append({
             'text': clean_narrative,
-            'bg_image': current_bg
+            'bg_image': current_bg,
+            'alt_text': current_alt
         })
         
     print(f"INFO: Generated {len(processed_segments)} clean animated narrative blocks.")
@@ -115,6 +171,7 @@ def create_vlog(md_text, music_path=None, language="en", volume=0.20, output="vl
     for i, seg in enumerate(processed_segments):
         text_content = seg['text']
         bg_image_path = seg['bg_image']
+        alt_content = seg['alt_text']
         
         audio_path = f"temp_audio_{i}.mp3"
         txt_path = f"temp_txt_{i}.png"
@@ -129,20 +186,20 @@ def create_vlog(md_text, music_path=None, language="en", volume=0.20, output="vl
         else:
             print(f"Processing segment {i+1}/{len(processed_segments)}...")
             
-            # 1. Generate Voice Audio if missing
+            # 1. Generate Voice Audio if missing (tts_text safely omits the markdown image component completely)
             if not audio_exists:
+                print(f"TTS: '{tts_text}'")
                 tts = gTTS(text=tts_text, lang=language)
                 tts.save(audio_path)
                 
             # 2. Generate Transparent Layout Frame if missing
             if not txt_exists:
-                generate_text_layer(text_content, i)
+                generate_text_layer(text_content, alt_content, i)
         
         # Load the asset structures into memory to build MoviePy timelines
         audio_clip = AudioFileClip(audio_path)
         duration = audio_clip.duration
         
-        print(f"Processing image {bg_image_path}...")
         if bg_image_path and os.path.exists(bg_image_path):
             bg_clip = ImageClip(bg_image_path).resized(new_size=(1280, 720)).with_duration(duration)
             bg_clip = bg_clip.transform(lambda get_frame, t: get_frame(t), apply_to=[])
@@ -169,7 +226,7 @@ def create_vlog(md_text, music_path=None, language="en", volume=0.20, output="vl
             else:
                 bg_music = bg_music.with_duration(final_video.duration)
             
-            # Safely scale background amplitude down to (default) 20% using MoviePy 2.x API
+            # Safely scale background amplitude down using MoviePy 2.x API
             bg_music = bg_music.with_volume_scaled(volume)
             
             combined_audio = CompositeAudioClip([final_video.audio, bg_music])
@@ -202,7 +259,7 @@ if __name__ == "__main__":
         parser.add_argument("-o", "--output", help="default: vlog_output.mp4 | the output filename", default="vlog_output.mp4")
 
         args = parser.parse_args()
-        print(f"INFO args: {args}")
+        print(f"INFO: {args}")
 
         try:
             with open(args.filename, 'r', encoding=args.encoding) as f:
