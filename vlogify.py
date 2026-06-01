@@ -135,7 +135,7 @@ def generate_text_layer(content, alt_text, index):
         browser.close()
     return path
 
-def create_vlog(md_text, music_path=None, language="en", volume=0.20, output="vlog_output.mp4", pause_duration=1.5):
+def create_vlog(md_text, music_path=None, language="en", volume=0.20, output="vlog_output.mp4", pause_duration=0.7):
     # Step 1: Pre-parse markdown blocks cleanly so images don't create empty slides
     raw_blocks = [p.strip() for p in md_text.split('\n\n') if p.strip()]
     processed_segments = []
@@ -263,7 +263,7 @@ if __name__ == "__main__":
         parser.add_argument("-l", "--language", help="default: en | to change language set it to: es, fr", default="en")
         parser.add_argument("-v", "--volume", help="default: 0.20 | tune the volume of the music", type=float, default=0.20)
         parser.add_argument("-o", "--output", help="default: vlog_output.mp4 | the output filename", default="vlog_output.mp4")
-        parser.add_argument("-p", "--pause", help="default: 1.5 | pause duration in seconds at the end of each slide", type=float, default=1.5)
+        parser.add_argument("-p", "--pause", help="default: 0.7 | pause duration in seconds at the end of each slide", type=float, default=0.7)
 
         args = parser.parse_args()
         print(f"INFO: {args}")
