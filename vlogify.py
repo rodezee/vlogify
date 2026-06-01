@@ -9,10 +9,10 @@ from moviepy import ImageClip, AudioFileClip, concatenate_videoclips, CompositeV
 def clean_only_symbols(text):
     """Strips markdown header markers and symbols from strings."""
     text = re.sub(r'#+\s*', '', text)
-    text = text.replace('`', '')
+    text = text.replace('```', '')
     return text.strip()
 
-def generate_text_layer(content, index):
+def generate_text_layer(content, index, name=None):
     """Renders a pixel-perfect transparent overlay with a text shadow glass pill."""
     lines = [line.strip() for line in content.split('\n') if line.strip()]
     
@@ -45,17 +45,31 @@ def generate_text_layer(content, index):
             font-size: 3.5em; font-weight: bold; margin-bottom: 20px; color: #ffffff;
             text-shadow: 2px 2px 15px rgba(0,0,0,0.9);
         }}
-        .content {{ 
+        .title {{ 
+            font-size: 1.8em; color: #f0f0f0;
+            line-height: 1.4; 
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.9);
+        }}
+        .text {{ 
             font-size: 1.8em; color: #f0f0f0;
             line-height: 1.4; 
             text-shadow: 2px 2px 10px rgba(0,0,0,0.9);
         }}
     </style>
     <body>
+        <header>
+            <div class="text-container">
+                {"<div class='header'>" + name + "</div>" if name else ""}
+            </div>
+        </header>
         <div class="text-container">
-            {"<div class='header'>" + title + "</div>" if title else ""}
-            {"<div class='content'>" + body + "</div>" if body else ""}
+            {"<div class='title'>" + title + "</div>" if title else ""}
         </div>
+        <footer>
+            <div class="text-container">
+                {"<div class='text'>" + body + "</div>" if body else ""}
+            </div>
+        </footer>
     </body>
     </html>
     """
@@ -128,6 +142,7 @@ def create_vlog(md_text, music_path=None, language="en", volume=0.20, output="vl
         audio_clip = AudioFileClip(audio_path)
         duration = audio_clip.duration
         
+        print(f"Processing image {bg_image_path}...")
         if bg_image_path and os.path.exists(bg_image_path):
             bg_clip = ImageClip(bg_image_path).resized(new_size=(1280, 720)).with_duration(duration)
             bg_clip = bg_clip.transform(lambda get_frame, t: get_frame(t), apply_to=[])
